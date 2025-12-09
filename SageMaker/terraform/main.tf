@@ -21,18 +21,21 @@ module "iam" {
 module "lambda" {
   source = "./modules/lambda"
 
-  lambda_zip_path   = var.lambda_zip_path
-  lambda_handler    = var.lambda_handler
-  bucket_name       = module.s3.s3_bucket_name
-  bucket_arn        = "arn:aws:s3:::${module.s3.s3_bucket_name}"
-  lambda_role_arn   = module.iam.lambda_role_arn
-  sagemaker_role_arn = module.iam.sagemaker_role_arn
-  endpoint_name     = var.endpoint_name
-  region            = var.aws_region
-  trigger_type      = var.trigger_type
-  instance_type     = var.instance_type
-  instance_count    = var.instance_count
-  inference_image   = var.inference_image
+  lambda_zip_path            = var.lambda_zip_path
+  lambda_handler             = var.lambda_handler
+  bucket_name                = module.s3.s3_bucket_name
+  bucket_arn                 = "arn:aws:s3:::${module.s3.s3_bucket_name}"
+  lambda_role_arn            = module.iam.lambda_role_arn
+  sagemaker_role_arn         = module.iam.sagemaker_role_arn
+  endpoint_name              = var.endpoint_name
+  region                     = var.aws_region
+  trigger_type               = var.trigger_type
+  serverless_memory_mb       = var.serverless_memory_mb
+  serverless_max_concurrency = var.serverless_max_concurrency
+  inference_image            = var.inference_image
+  # Legacy variables (deprecated)
+  instance_type              = var.instance_type
+  instance_count             = var.instance_count
 }
 
 module "eventbridge" {
@@ -47,15 +50,16 @@ module "eventbridge" {
   depends_on = [module.lambda]
 }
 
+module "monitoring" {
+  source = "./modules/monitoring"
 
-output "s3_bucket" {
-  value = module.s3.s3_bucket_name
+  endpoint_name        = var.endpoint_name
+  region               = var.aws_region
+  environment          = var.environment
+  alert_email          = var.alert_email
+  error_rate_threshold = var.error_rate_threshold
+  latency_threshold_ms = var.latency_threshold_ms
+  lambda_function_name = module.lambda.lambda_function_name
 }
 
-output "lambda_function_arn" {
-  value = module.lambda.lambda_function_arn
-}
 
-output "sagemaker_role_arn" {
-  value = module.iam.sagemaker_role_arn
-}
