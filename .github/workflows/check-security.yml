@@ -3,8 +3,6 @@ name: Automated MLOps Deploy
 on:
   push:
     branches: [ "main" ] # Chạy khi có code mới vào nhánh main
-    pull_request:
-    branches: [ "main" ]
 
 jobs:
 
