@@ -30,3 +30,21 @@ variable "lambda_function_name" {
   description = "Name of the Lambda function (used for permissions)"
   type        = string
 }
+
+variable "enable_training_trigger" {
+  description = "Whether to enable event-driven training trigger for data/train/ uploads"
+  type        = bool
+  default     = false
+}
+
+variable "training_lambda_function_arn" {
+  description = "ARN of the Lambda function to trigger training workflows"
+  type        = string
+  default     = ""
+}
+
+variable "training_lambda_function_name" {
+  description = "Name of the Lambda function to trigger training workflows"
+  type        = string
+  default     = ""
+}

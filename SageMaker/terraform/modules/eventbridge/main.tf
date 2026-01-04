@@ -16,7 +16,7 @@ resource "aws_s3_bucket_notification" "notify_lambda" {
   
 }
 
-# EventBridge rule (CloudTrail-based) -> Lambda
+# EventBridge rule (CloudTrail-based) -> Lambda for model artifacts
 resource "aws_cloudwatch_event_rule" "s3_put_rule" {
   count = var.trigger_type == "eventbridge" ? 1 : 0
 
@@ -48,4 +48,41 @@ resource "aws_lambda_permission" "allow_eventbridge" {
   function_name = var.lambda_function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.s3_put_rule[0].arn
+}
+
+# EventBridge rule for training data uploads -> trigger_training Lambda
+resource "aws_cloudwatch_event_rule" "training_data_rule" {
+  count = var.enable_training_trigger ? 1 : 0
+
+  name = "mlops-training-data-uploaded-${replace(local.bucket_name, "[^a-zA-Z0-9_-]", "-")}"
+
+  event_pattern = jsonencode({
+    source = ["aws.s3"],
+    detail-type = ["AWS API Call via CloudTrail"],
+    detail = {
+      eventName = ["PutObject", "CompleteMultipartUpload"],
+      requestParameters = {
+        bucketName = [local.bucket_name],
+        key = [{
+          prefix = "data/train/"
+        }]
+      }
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "training_rule_target" {
+  count     = var.enable_training_trigger ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.training_data_rule[0].name
+  target_id = "sendToTrainingLambda"
+  arn       = var.training_lambda_function_arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_training" {
+  count         = var.enable_training_trigger ? 1 : 0
+  statement_id  = "AllowExecutionFromEventBridgeTraining"
+  action        = "lambda:InvokeFunction"
+  function_name = var.training_lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.training_data_rule[0].arn
 }
