@@ -2,9 +2,8 @@ from huggingface_hub import snapshot_download
 import os
 import shutil
 
-# Tên model trên Hugging Face Hub (Ví dụ model bạn đang dùng)
+# Tên model trên Hugging Face Hub 
 MODEL_ID = "distilbert-base-cased" 
-# Hoặc đường dẫn model của riêng bạn: "username/my-finetuned-model"
 
 # Thư mục sẽ đóng gói để upload
 OUTPUT_DIR = "./model_package"

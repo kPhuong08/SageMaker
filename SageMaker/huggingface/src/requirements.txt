@@ -1,0 +1,6 @@
+# Training dependencies for SageMaker
+transformers>=4.28.0
+datasets>=2.10.0
+torch>=2.0.0
+scikit-learn>=1.2.0
+pandas>=1.5.0

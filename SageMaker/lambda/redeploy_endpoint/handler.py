@@ -70,17 +70,25 @@ def lambda_handler(event, context):
             ExecutionRoleArn=SAGEMAKER_ROLE
         )
 
-        # Create endpoint config (simple single-variant)
-        logger.info('Creating endpoint config %s', cfg_name)
+        # Create endpoint config (serverless)
+        logger.info('Creating serverless endpoint config %s', cfg_name)
+        
+        # Get serverless configuration from environment variables
+        memory_size_mb = int(os.environ.get('SERVERLESS_MEMORY_MB', '4096'))
+        max_concurrency = int(os.environ.get('SERVERLESS_MAX_CONCURRENCY', '10'))
+        
+        logger.info('Serverless config: MemorySize=%dMB, MaxConcurrency=%d', memory_size_mb, max_concurrency)
+        
         sagemaker.create_endpoint_config(
             EndpointConfigName=cfg_name,
             ProductionVariants=[
                 {
                     'VariantName': 'AllTraffic',
                     'ModelName': model_name,
-                    'InitialInstanceCount': int(os.environ.get('INSTANCE_COUNT', '1')),
-                    'InstanceType': os.environ.get('INSTANCE_TYPE', 'ml.m5.large'),
-                    'InitialVariantWeight': 1.0
+                    'ServerlessConfig': {
+                        'MemorySizeInMB': memory_size_mb,
+                        'MaxConcurrency': max_concurrency
+                    }
                 }
             ]
         )

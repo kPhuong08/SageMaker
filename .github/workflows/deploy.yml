@@ -1,0 +1,57 @@
+name: Automated MLOps Deploy
+
+on:
+  push:
+    branches: [ "main" ] # Chạy khi có code mới vào nhánh main
+    pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Lấy code từ Git về
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Cài Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    # 3. Cài thư viện cần thiết
+    - name: Install Dependencies
+      run: |
+        pip install huggingface_hub torch transformers boto3
+
+    # 4. Tải Model về (Dùng script ở Bước 2)
+    - name: Download Model from Hub
+      run: python model_setup/download_model.py
+
+    # 5. (Optional) Sanity Check - Test xem model tải về có lỗi không
+    - name: Sanity Check
+      run: |
+        python -c "from transformers import AutoModel; AutoModel.from_pretrained('./model_package'); print('✅ Model OK')"
+
+    # 6. Nén file .tar.gz (Quan trọng: Nén đúng chuẩn Flat structure)
+    - name: Package Model
+      run: |
+        cd model_package
+        # Nén tất cả file trong folder này thành model.tar.gz và đưa ra ngoài
+        tar -czvf ../model.tar.gz *
+
+    # 7. Upload lên AWS S3
+    - name: Upload to S3
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Copy artifact to S3
+      run: |
+        # Upload đè lên file cũ -> Kích hoạt Lambda của bạn
+        aws s3 cp model.tar.gz s3://sagemaker-automlops/model/model.tar.gz
