@@ -78,6 +78,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "sagemaker:DescribeTrainingJob",
           "sagemaker:StopTrainingJob",
           "sagemaker:ListTrainingJobs"
+          "sagemaker:AddTags"
         ],
         Resource = "*"
       },
@@ -109,7 +110,7 @@ resource "aws_iam_role_policy" "lambda_pass_sagemaker_role" {
       {
         Effect = "Allow"
         Action = "iam:PassRole"
-        # Chỉ cho phép pass đúng cái role SageMaker (để bảo mật)
+        # Only allow role SageMaker pass
         Resource = aws_iam_role.sagemaker_execution_role.arn
         Condition = {
           StringEquals = {
