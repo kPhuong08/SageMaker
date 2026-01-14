@@ -29,13 +29,13 @@ s3_client = boto3.client('s3')
 sns_client = boto3.client('sns')
 
 # Environment variables
-SAGEMAKER_ROLE = os.environ.get('SAGEMAKER_EXECUTION_ROLE_ARN', 'arn:aws:iam::123456789012:role/SageMakerRole')
+SAGEMAKER_ROLE = os.environ.get('SAGEMAKER_ROLE_ARN')
 TRAINING_IMAGE = os.environ.get('TRAINING_IMAGE', '763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-training:1.13.1-transformers4.26.0-gpu-py39-cu117-ubuntu20.04')
 INSTANCE_TYPE = os.environ.get('TRAINING_INSTANCE_TYPE', 'ml.g4dn.xlarge')
 INSTANCE_COUNT = int(os.environ.get('TRAINING_INSTANCE_COUNT', '1'))
 MAX_RUNTIME_SECONDS = int(os.environ.get('MAX_RUNTIME_SECONDS', '3600'))  # 1 hour
 SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
-S3_BUCKET = os.environ.get('S3_BUCKET', 'test-bucket')
+S3_BUCKET = os.environ.get('S3_BUCKET')
 
 
 def lambda_handler(event, context):
