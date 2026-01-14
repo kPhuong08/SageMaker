@@ -1,0 +1,293 @@
+name: CI/CD Pipeline
+
+# Trigger on pushes to main branch and pull requests
+# Focus: Code validation, testing, and S3 upload ONLY
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'SageMaker/huggingface/**'
+      - 'SageMaker/lambda/**'
+      - 'SageMaker/terraform/**'
+      - 'SageMaker/config/**'
+      - 'SageMaker/examples/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'SageMaker/huggingface/**'
+      - 'SageMaker/lambda/**'
+      - 'SageMaker/terraform/**'
+      - 'SageMaker/config/**'
+      - 'SageMaker/examples/**'
+
+jobs:
+  validate-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Setup
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3 pandas scikit-learn transformers datasets torch
+          pip install pytest hypothesis  # For testing
+          
+      # Step 2: Code Validation
+      - name: Validate Python Syntax
+        run: |
+          echo "=========================================="
+          echo "Validating Python Code Syntax"
+          echo "=========================================="
+          
+          # Check Python syntax in all Python files
+          find SageMaker/ -name "*.py" -exec python -m py_compile {} \;
+          echo "✓ Python syntax validation passed"
+
+      - name: Validate Terraform Configuration
+        run: |
+          echo "=========================================="
+          echo "Validating Terraform Configuration"
+          echo "=========================================="
+          
+          # Install Terraform
+          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install terraform
+          
+          # Validate Terraform files
+          cd SageMaker/terraform
+          terraform init -backend=false
+          terraform validate
+          echo "✓ Terraform validation passed"
+
+      # Step 3: Run Tests
+      - name: Run Unit Tests
+        run: |
+          echo "=========================================="
+          echo "Running Unit Tests"
+          echo "=========================================="
+          
+          # Run tests if they exist
+          if [ -d "SageMaker/tests" ]; then
+            cd SageMaker
+            python -m pytest tests/ -v
+          else
+            echo "No tests directory found - skipping unit tests"
+          fi
+          
+          # Run Lambda function tests
+          if [ -f "SageMaker/lambda/training_orchestrator/test_training_orchestration.py" ]; then
+            cd SageMaker/lambda/training_orchestrator
+            python -m pytest test_training_orchestration.py -v --tb=short
+          fi
+          
+          if [ -f "SageMaker/lambda/deployment_orchestrator/test_deployment_orchestration.py" ]; then
+            cd SageMaker/lambda/deployment_orchestrator
+            python -m pytest test_deployment_orchestration.py -v --tb=short
+          fi
+          
+          echo "✓ Tests completed"
+
+      # Step 4: S3 Upload (Only if validation and tests pass)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Upload Data Files to S3
+        env:
+          SM_BUCKET: ${{ secrets.SM_BUCKET }}
+        run: |
+          echo "=========================================="
+          echo "Uploading Data Files to S3"
+          echo "=========================================="
+          
+          # Upload example data if it exists
+          if [ -f "SageMaker/examples/sample_data.csv" ]; then
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            DATA_KEY="data/train/sample_data_${TIMESTAMP}.csv"
+            
+            echo "Uploading sample data to s3://$SM_BUCKET/$DATA_KEY"
+            
+            # Upload with error handling
+            if aws s3 cp SageMaker/examples/sample_data.csv "s3://$SM_BUCKET/$DATA_KEY"; then
+              echo "✓ Data uploaded successfully"
+              echo "S3_DATA_PATH=s3://$SM_BUCKET/$DATA_KEY" >> $GITHUB_ENV
+              
+              # Verify upload by checking file exists
+              if aws s3 ls "s3://$SM_BUCKET/$DATA_KEY" > /dev/null 2>&1; then
+                echo "✓ Upload verified - file exists in S3"
+                FILE_SIZE=$(aws s3 ls "s3://$SM_BUCKET/$DATA_KEY" | awk '{print $3}')
+                echo "  File size: $FILE_SIZE bytes"
+              else
+                echo "✗ Upload verification failed - file not found in S3"
+                exit 1
+              fi
+            else
+              echo "✗ Data upload failed"
+              echo "Error: Failed to upload sample data to S3"
+              echo "Check AWS credentials and bucket permissions"
+              exit 1
+            fi
+          else
+            echo "No sample data found - skipping data upload"
+          fi
+
+      - name: Upload Model Files to S3
+        env:
+          SM_BUCKET: ${{ secrets.SM_BUCKET }}
+        run: |
+          echo "=========================================="
+          echo "Uploading Model Files to S3"
+          echo "=========================================="
+          
+          # Upload training code and configuration
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          CODE_KEY="models/code/training_code_${TIMESTAMP}.tar.gz"
+          
+          # Create archive of training code
+          cd SageMaker/huggingface
+          if tar -czf ../../training_code.tar.gz src/ ops/; then
+            echo "✓ Training code archive created"
+          else
+            echo "✗ Failed to create training code archive"
+            exit 1
+          fi
+          cd ../..
+          
+          echo "Uploading training code to s3://$SM_BUCKET/$CODE_KEY"
+          
+          # Upload with error handling
+          if aws s3 cp training_code.tar.gz "s3://$SM_BUCKET/$CODE_KEY"; then
+            echo "✓ Training code uploaded successfully"
+            echo "S3_CODE_PATH=s3://$SM_BUCKET/$CODE_KEY" >> $GITHUB_ENV
+            
+            # Verify upload
+            if aws s3 ls "s3://$SM_BUCKET/$CODE_KEY" > /dev/null 2>&1; then
+              echo "✓ Upload verified - training code exists in S3"
+              FILE_SIZE=$(aws s3 ls "s3://$SM_BUCKET/$CODE_KEY" | awk '{print $3}')
+              echo "  File size: $FILE_SIZE bytes"
+            else
+              echo "✗ Upload verification failed - training code not found in S3"
+              exit 1
+            fi
+          else
+            echo "✗ Training code upload failed"
+            echo "Error: Failed to upload training code to S3"
+            exit 1
+          fi
+          
+          # Upload configuration files
+          CONFIG_KEY="config/evaluation_thresholds_${TIMESTAMP}.json"
+          if [ -f "SageMaker/config/evaluation_thresholds.json" ]; then
+            echo "Uploading config to s3://$SM_BUCKET/$CONFIG_KEY"
+            
+            if aws s3 cp SageMaker/config/evaluation_thresholds.json "s3://$SM_BUCKET/$CONFIG_KEY"; then
+              echo "✓ Configuration uploaded successfully"
+              echo "S3_CONFIG_PATH=s3://$SM_BUCKET/$CONFIG_KEY" >> $GITHUB_ENV
+              
+              # Verify config upload
+              if aws s3 ls "s3://$SM_BUCKET/$CONFIG_KEY" > /dev/null 2>&1; then
+                echo "✓ Config upload verified"
+              else
+                echo "✗ Config upload verification failed"
+                exit 1
+              fi
+            else
+              echo "✗ Configuration upload failed"
+              exit 1
+            fi
+          else
+            echo "No configuration file found - skipping config upload"
+          fi
+
+      # Step 5: Upload Verification and Logging
+      - name: Verify S3 Uploads and Log Paths
+        env:
+          SM_BUCKET: ${{ secrets.SM_BUCKET }}
+        run: |
+          echo "=========================================="
+          echo "S3 Upload Verification and Summary"
+          echo "=========================================="
+          
+          # Verify uploads by listing recent objects
+          echo "Recent uploads to s3://$SM_BUCKET:"
+          aws s3 ls "s3://$SM_BUCKET/" --recursive --human-readable | tail -10
+          
+          echo ""
+          echo "Detailed Upload Summary:"
+          echo "------------------------"
+          
+          UPLOAD_SUCCESS=true
+          
+          if [ ! -z "$S3_DATA_PATH" ]; then
+            echo "✓ Data uploaded to: $S3_DATA_PATH"
+            # Double-check data file exists
+            if aws s3 ls "$S3_DATA_PATH" > /dev/null 2>&1; then
+              echo "  Status: VERIFIED"
+            else
+              echo "  Status: VERIFICATION FAILED"
+              UPLOAD_SUCCESS=false
+            fi
+          else
+            echo "- No data files uploaded (none found)"
+          fi
+          
+          if [ ! -z "$S3_CODE_PATH" ]; then
+            echo "✓ Training code uploaded to: $S3_CODE_PATH"
+            # Double-check code file exists
+            if aws s3 ls "$S3_CODE_PATH" > /dev/null 2>&1; then
+              echo "  Status: VERIFIED"
+            else
+              echo "  Status: VERIFICATION FAILED"
+              UPLOAD_SUCCESS=false
+            fi
+          fi
+          
+          if [ ! -z "$S3_CONFIG_PATH" ]; then
+            echo "✓ Configuration uploaded to: $S3_CONFIG_PATH"
+            # Double-check config file exists
+            if aws s3 ls "$S3_CONFIG_PATH" > /dev/null 2>&1; then
+              echo "  Status: VERIFIED"
+            else
+              echo "  Status: VERIFICATION FAILED"
+              UPLOAD_SUCCESS=false
+            fi
+          fi
+          
+          echo ""
+          if [ "$UPLOAD_SUCCESS" = true ]; then
+            echo "=========================================="
+            echo "CI/CD Pipeline Complete - SUCCESS"
+            echo "=========================================="
+            echo "All uploads verified successfully"
+            echo "Next Steps: AWS services will handle MLOps orchestration"
+            echo "- Training will be triggered by S3 events"
+            echo "- Deployment will be handled by Lambda functions"
+            echo "=========================================="
+          else
+            echo "=========================================="
+            echo "CI/CD Pipeline Complete - UPLOAD VERIFICATION FAILED"
+            echo "=========================================="
+            echo "Some uploads could not be verified"
+            echo "Check AWS credentials and S3 bucket permissions"
+            exit 1
+          fi
+
+      # Step 6: Cleanup
+      - name: Cleanup Temporary Files
+        if: always()
+        run: |
+          # Remove temporary files
+          rm -f training_code.tar.gz
+          echo "✓ Cleanup completed"
