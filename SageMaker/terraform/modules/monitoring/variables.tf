@@ -35,8 +35,14 @@ variable "latency_threshold_ms" {
   default     = 3000
 }
 
-variable "lambda_function_name" {
-  description = "Name of the Lambda function to monitor (optional)"
+variable "training_lambda_function_name" {
+  description = "Name of the training orchestrator Lambda function to monitor"
+  type        = string
+  default     = ""
+}
+
+variable "deployment_lambda_function_name" {
+  description = "Name of the deployment orchestrator Lambda function to monitor"
   type        = string
   default     = ""
 }

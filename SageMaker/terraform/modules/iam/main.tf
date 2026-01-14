@@ -56,6 +56,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Effect = "Allow",
         Action = [
           "s3:GetObject",
+          "s3:PutObject",
           "s3:ListBucket"
         ],
         Resource = [
@@ -72,7 +73,11 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "sagemaker:UpdateEndpoint",
           "sagemaker:DescribeEndpoint",
           "sagemaker:DeleteModel",
-          "sagemaker:DescribeModel"
+          "sagemaker:DescribeModel",
+          "sagemaker:CreateTrainingJob",
+          "sagemaker:DescribeTrainingJob",
+          "sagemaker:StopTrainingJob",
+          "sagemaker:ListTrainingJobs"
         ],
         Resource = "*"
       },
@@ -80,6 +85,13 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Effect = "Allow",
         Action = [
           "iam:PassRole"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "sns:Publish"
         ],
         Resource = "*"
       }

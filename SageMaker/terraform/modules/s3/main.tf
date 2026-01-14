@@ -15,3 +15,11 @@ resource "aws_s3_bucket_versioning" "models" {
     status = "Enabled"
   }
 }
+
+# Enable S3 event notifications to EventBridge
+resource "aws_s3_bucket_notification" "models_notification" {
+  count  = var.create_bucket ? 1 : 0
+  bucket = aws_s3_bucket.models[0].id
+
+  eventbridge = true
+}

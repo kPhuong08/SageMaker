@@ -63,3 +63,8 @@ logs/
 tmp/
 temp/
 model_location.txt
+
+#Python_cache
+.hypothesis/
+.pytest_cache/
+.kiro/

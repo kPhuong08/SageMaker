@@ -22,34 +22,34 @@ variable "existing_bucket_name" {
   default     = ""
 }
 
-variable "lambda_zip_path" {
-  description = "Path to the packaged Lambda zip"
-  type        = string
-  # default     = "${path.module}/../lambda/redeploy_endpoint/redeploy.zip"
-}
+#variable "lambda_zip_path" {
+#  description = "Path to the packaged Lambda zip"
+#  type        = string
+#  # default     = "${path.module}/../lambda/redeploy_endpoint/redeploy.zip"
+#}
 
-variable "lambda_handler" {
-  description = "Lambda handler"
-  type        = string
-  default     = "handler.lambda_handler"
-}
+#variable "lambda_handler" {
+#  description = "Lambda handler"
+#  type        = string
+#  default     = "handler.lambda_handler"
+#}
 
-variable "source_file" {
-  description = "Path to the Lambda source file"
-  type        = string
-  default     = "/../lambda/redeploy_endpoint/handler.py"
-}
+#variable "source_file" {
+#  description = "Path to the Lambda source file"
+#  type        = string
+#  default     = "/../lambda/redeploy_endpoint/handler.py"
+#}
 
 variable "endpoint_name" {
   description = "SageMaker endpoint name"
   type        = string
-  default     = "hf-inference-endpoint"
+  default     = "serverless-inference-endpoint"
 }
 
 variable "trigger_type" {
-  description = "Trigger type: 's3' or 'eventbridge'"
+  description = "[DEPRECATED] Trigger type - now always 'eventbridge' for event-driven architecture"
   type        = string
-  default     = "s3"
+  default     = "eventbridge"
 }
 
 # Serverless Endpoint Configuration
@@ -118,46 +118,30 @@ variable "inference_image" {
   type        = string
   default     = ""
 }
-# Event-Driven Training Trigger Configuration
-variable "enable_training_trigger" {
-  description = "Whether to enable event-driven training trigger for data/train/ uploads"
-  type        = bool
-  default     = false
-}
+# Removed: GitHub workflow triggering variables - no longer needed for event-driven architecture
 
-variable "trigger_source_file" {
-  description = "Path to the trigger training Lambda source file"
+# Training Orchestrator Lambda Configuration
+variable "training_orchestrator_source_file" {
+  description = "Path to the training orchestrator Lambda source file"
   type        = string
-  default     = "/../lambda/trigger_training/handler.py"
+  default     = "../lambda/training_orchestrator/handler.py"
 }
 
-variable "trigger_lambda_handler" {
-  description = "Trigger training Lambda handler"
+variable "training_orchestrator_handler" {
+  description = "Training orchestrator Lambda handler"
   type        = string
   default     = "handler.lambda_handler"
 }
 
-variable "github_token" {
-  description = "GitHub personal access token for triggering workflows"
+# Deployment Orchestrator Lambda Configuration
+variable "deployment_orchestrator_source_file" {
+  description = "Path to the deployment orchestrator Lambda source file"
   type        = string
-  default     = ""
-  sensitive   = true
+  default     = "../lambda/deployment_orchestrator/handler.py"
 }
 
-variable "github_owner" {
-  description = "GitHub repository owner/organization"
+variable "deployment_orchestrator_handler" {
+  description = "Deployment orchestrator Lambda handler"
   type        = string
-  default     = ""
-}
-
-variable "github_repo" {
-  description = "GitHub repository name"
-  type        = string
-  default     = ""
-}
-
-variable "workflow_id" {
-  description = "GitHub workflow file name"
-  type        = string
-  default     = "mlops.yml"
+  default     = "handler.lambda_handler"
 }

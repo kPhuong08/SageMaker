@@ -15,36 +15,22 @@ variable "existing_bucket_name" {
   default     = ""
 }
 
-variable "trigger_type" {
-  description = "Trigger mechanism for new model artifacts. 's3' or 'eventbridge'"
-  type        = string
-  default     = "s3"
-}
-
-variable "lambda_function_arn" {
-  description = "ARN of the Lambda function to invoke"
+variable "training_orchestrator_lambda_arn" {
+  description = "ARN of the Training Orchestrator Lambda function"
   type        = string
 }
 
-variable "lambda_function_name" {
-  description = "Name of the Lambda function (used for permissions)"
+variable "training_orchestrator_lambda_name" {
+  description = "Name of the Training Orchestrator Lambda function (used for permissions)"
   type        = string
 }
 
-variable "enable_training_trigger" {
-  description = "Whether to enable event-driven training trigger for data/train/ uploads"
-  type        = bool
-  default     = false
+variable "deployment_orchestrator_lambda_arn" {
+  description = "ARN of the Deployment Orchestrator Lambda function"
+  type        = string
 }
 
-variable "training_lambda_function_arn" {
-  description = "ARN of the Lambda function to trigger training workflows"
+variable "deployment_orchestrator_lambda_name" {
+  description = "Name of the Deployment Orchestrator Lambda function (used for permissions)"
   type        = string
-  default     = ""
-}
-
-variable "training_lambda_function_name" {
-  description = "Name of the Lambda function to trigger training workflows"
-  type        = string
-  default     = ""
 }

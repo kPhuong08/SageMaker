@@ -3,66 +3,18 @@ locals {
   bucket_arn  = "arn:aws:s3:::${local.bucket_name}"
 }
 
-# S3 notification -> Lambda (when using S3 notifications)
-resource "aws_s3_bucket_notification" "notify_lambda" {
-  count  = var.trigger_type == "s3" ? 1 : 0
-  bucket = local.bucket_name
-
-  lambda_function {
-    lambda_function_arn = var.lambda_function_arn
-    events              = ["s3:ObjectCreated:*"]
-  }
-
-  
-}
-
-# EventBridge rule (CloudTrail-based) -> Lambda for model artifacts
-resource "aws_cloudwatch_event_rule" "s3_put_rule" {
-  count = var.trigger_type == "eventbridge" ? 1 : 0
-
-  name = "mlops-s3-object-created-${replace(local.bucket_name, "[^a-zA-Z0-9_-]", "-")}" 
-
-  event_pattern = jsonencode({
-    source = ["aws.s3"],
-    detail-type = ["AWS API Call via CloudTrail"],
-    detail = {
-      eventName = ["PutObject", "CompleteMultipartUpload"],
-      requestParameters = {
-        bucketName = [local.bucket_name]
-      }
-    }
-  })
-}
-
-resource "aws_cloudwatch_event_target" "rule_target" {
-  count     = var.trigger_type == "eventbridge" ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.s3_put_rule[0].name
-  target_id = "sendToLambda"
-  arn       = var.lambda_function_arn
-}
-
-resource "aws_lambda_permission" "allow_eventbridge" {
-  count         = var.trigger_type == "eventbridge" ? 1 : 0
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.s3_put_rule[0].arn
-}
-
-# EventBridge rule for training data uploads -> trigger_training Lambda
+# EventBridge rule for training data uploads -> Training Orchestrator Lambda
 resource "aws_cloudwatch_event_rule" "training_data_rule" {
-  count = var.enable_training_trigger ? 1 : 0
-
   name = "mlops-training-data-uploaded-${replace(local.bucket_name, "[^a-zA-Z0-9_-]", "-")}"
 
   event_pattern = jsonencode({
     source = ["aws.s3"],
-    detail-type = ["AWS API Call via CloudTrail"],
+    detail-type = ["Object Created"],
     detail = {
-      eventName = ["PutObject", "CompleteMultipartUpload"],
-      requestParameters = {
-        bucketName = [local.bucket_name],
+      bucket = {
+        name = [local.bucket_name]
+      },
+      object = {
         key = [{
           prefix = "data/train/"
         }]
@@ -72,17 +24,49 @@ resource "aws_cloudwatch_event_rule" "training_data_rule" {
 }
 
 resource "aws_cloudwatch_event_target" "training_rule_target" {
-  count     = var.enable_training_trigger ? 1 : 0
-  rule      = aws_cloudwatch_event_rule.training_data_rule[0].name
-  target_id = "sendToTrainingLambda"
-  arn       = var.training_lambda_function_arn
+  rule      = aws_cloudwatch_event_rule.training_data_rule.name
+  target_id = "sendToTrainingOrchestratorLambda"
+  arn       = var.training_orchestrator_lambda_arn
 }
 
 resource "aws_lambda_permission" "allow_eventbridge_training" {
-  count         = var.enable_training_trigger ? 1 : 0
   statement_id  = "AllowExecutionFromEventBridgeTraining"
   action        = "lambda:InvokeFunction"
-  function_name = var.training_lambda_function_name
+  function_name = var.training_orchestrator_lambda_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.training_data_rule[0].arn
+  source_arn    = aws_cloudwatch_event_rule.training_data_rule.arn
+}
+
+# EventBridge rule for approved model uploads -> Deployment Orchestrator Lambda
+resource "aws_cloudwatch_event_rule" "approved_model_rule" {
+  name = "mlops-approved-model-uploaded-${replace(local.bucket_name, "[^a-zA-Z0-9_-]", "-")}"
+
+  event_pattern = jsonencode({
+    source = ["aws.s3"],
+    detail-type = ["Object Created"],
+    detail = {
+      bucket = {
+        name = [local.bucket_name]
+      },
+      object = {
+        key = [{
+          prefix = "models/approved/"
+        }]
+      }
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "deployment_rule_target" {
+  rule      = aws_cloudwatch_event_rule.approved_model_rule.name
+  target_id = "sendToDeploymentOrchestratorLambda"
+  arn       = var.deployment_orchestrator_lambda_arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_deployment" {
+  statement_id  = "AllowExecutionFromEventBridgeDeployment"
+  action        = "lambda:InvokeFunction"
+  function_name = var.deployment_orchestrator_lambda_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.approved_model_rule.arn
 }

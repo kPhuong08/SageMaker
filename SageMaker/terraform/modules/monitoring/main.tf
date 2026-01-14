@@ -7,7 +7,7 @@ locals {
 
 # SNS Topic for Alarm Notifications
 resource "aws_sns_topic" "mlops_alerts" {
-  name = "mlops-alerts-${var.endpoint_name}"
+  name = "mlops-alerts"
   
   tags = {
     Name        = "MLOps Alerts"
@@ -25,7 +25,7 @@ resource "aws_sns_topic_subscription" "email_subscription" {
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "mlops_dashboard" {
-  dashboard_name = "MLOps-${var.endpoint_name}"
+  dashboard_name = "MLOps-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -175,10 +175,14 @@ resource "aws_cloudwatch_metric_alarm" "high_latency" {
 }
 
 # Alarm: Training Job Failures
+resource "aws_cloudwatch_log_group" "sagemaker_training_logs" {
+  name              = "/aws/sagemaker/TrainingJobs"
+  retention_in_days = 14
+}
 # Note: This uses a metric filter on CloudWatch Logs
 resource "aws_cloudwatch_log_metric_filter" "training_failures" {
   name           = "mlops-training-failures"
-  log_group_name = "/aws/sagemaker/TrainingJobs"
+  log_group_name = aws_cloudwatch_log_group.sagemaker_training_logs.name
   pattern        = "[time, request_id, event_type = TrainingJobStatus, status = Failed*]"
 
   metric_transformation {
@@ -208,10 +212,36 @@ resource "aws_cloudwatch_metric_alarm" "training_job_failure" {
   }
 }
 
-# Alarm: Lambda Function Errors (for redeploy_endpoint)
-resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  count               = var.lambda_function_name != "" ? 1 : 0
-  alarm_name          = "mlops-lambda-errors-${var.lambda_function_name}"
+# Alarm: Lambda Function Errors (for redeploy_endpoint) - DEPRECATED
+#resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+#  count               = var.lambda_function_name != "" ? 1 : 0
+#  alarm_name          = "mlops-lambda-errors-${var.lambda_function_name}"
+#  comparison_operator = "GreaterThanThreshold"
+#  evaluation_periods  = 1
+#  metric_name         = "Errors"
+#  namespace           = "AWS/Lambda"
+#  period              = 300
+#  statistic           = "Sum"
+#  threshold           = 0
+#  alarm_description   = "Lambda function encountered errors"
+#  treat_missing_data  = "notBreaching"
+#
+#  dimensions = {
+#    FunctionName = var.lambda_function_name
+#  }
+#
+#  alarm_actions = [aws_sns_topic.mlops_alerts.arn]
+#
+#  tags = {
+#    Name        = "Lambda Errors Alarm"
+#    Environment = var.environment
+#  }
+#}
+
+# Alarm: Training Orchestrator Lambda Errors
+resource "aws_cloudwatch_metric_alarm" "training_lambda_errors" {
+  count               = var.training_lambda_function_name != "" ? 1 : 0
+  alarm_name          = "mlops-training-lambda-errors-${var.training_lambda_function_name}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Errors"
@@ -219,17 +249,43 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   period              = 300
   statistic           = "Sum"
   threshold           = 0
-  alarm_description   = "Lambda function encountered errors"
+  alarm_description   = "Training orchestrator Lambda function encountered errors"
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    FunctionName = var.lambda_function_name
+    FunctionName = var.training_lambda_function_name
   }
 
   alarm_actions = [aws_sns_topic.mlops_alerts.arn]
 
   tags = {
-    Name        = "Lambda Errors Alarm"
+    Name        = "Training Lambda Errors Alarm"
+    Environment = var.environment
+  }
+}
+
+# Alarm: Deployment Orchestrator Lambda Errors
+resource "aws_cloudwatch_metric_alarm" "deployment_lambda_errors" {
+  count               = var.deployment_lambda_function_name != "" ? 1 : 0
+  alarm_name          = "mlops-deployment-lambda-errors-${var.deployment_lambda_function_name}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  alarm_description   = "Deployment orchestrator Lambda function encountered errors"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = var.deployment_lambda_function_name
+  }
+
+  alarm_actions = [aws_sns_topic.mlops_alerts.arn]
+
+  tags = {
+    Name        = "Deployment Lambda Errors Alarm"
     Environment = var.environment
   }
 }

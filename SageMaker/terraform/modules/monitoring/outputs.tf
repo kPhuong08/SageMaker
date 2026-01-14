@@ -21,6 +21,5 @@ output "alarm_arns" {
     high_error_rate       = aws_cloudwatch_metric_alarm.high_error_rate.arn
     high_latency          = aws_cloudwatch_metric_alarm.high_latency.arn
     training_job_failure  = aws_cloudwatch_metric_alarm.training_job_failure.arn
-    lambda_errors         = length(aws_cloudwatch_metric_alarm.lambda_errors) > 0 ? aws_cloudwatch_metric_alarm.lambda_errors[0].arn : null
   }
 }
