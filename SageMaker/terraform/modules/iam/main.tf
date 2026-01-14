@@ -99,4 +99,26 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
+resource "aws_iam_role_policy" "lambda_pass_sagemaker_role" {
+  name = "lambda_pass_sagemaker_role_policy"
+  role = aws_iam_role.lambda_role.id  # Tên resource role của Lambda function
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "iam:PassRole"
+        # Chỉ cho phép pass đúng cái role SageMaker (để bảo mật)
+        Resource = aws_iam_role.sagemaker_execution_role.arn
+        Condition = {
+          StringEquals = {
+            "iam:PassedToService": "sagemaker.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
 

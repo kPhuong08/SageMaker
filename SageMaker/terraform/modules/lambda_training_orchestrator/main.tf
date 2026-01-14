@@ -1,7 +1,8 @@
 resource "aws_lambda_function" "training_orchestrator" {
-  filename         = var.lambda_zip_path
-  function_name    = "mlops-training-orchestrator-${var.bucket_name}"
-  role            = var.lambda_role_arn
+  filename        = var.lambda_zip_path
+  function_name   = "mlops-training-orchestrator-${var.bucket_name}"
+  role     = var.lambda_role_arn
+#  sagemaker_role  = var.sagemaker_role_arn
   handler         = var.lambda_handler
   runtime         = "python3.9"
   timeout         = 900  # 15 minutes for training orchestration
