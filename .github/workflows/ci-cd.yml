@@ -70,6 +70,10 @@ jobs:
 
       # Step 3: Run Tests
       - name: Run Unit Tests
+        env: 
+          AWS_DEFAULT_REGION: us-east-1  # Region giả để boto3 không bị crash
+          AWS_ACCESS_KEY_ID: testing     # Key giả
+          AWS_SECRET_ACCESS_KEY: testing
         run: |
           echo "=========================================="
           echo "Running Unit Tests"
