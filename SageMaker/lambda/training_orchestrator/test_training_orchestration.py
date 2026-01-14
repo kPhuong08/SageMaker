@@ -56,7 +56,7 @@ class TestTrainingOrchestration:
         with patch.dict(os.environ, {
             'SAGEMAKER_EXECUTION_ROLE_ARN': 'arn:aws:iam::123456789012:role/SageMakerRole',
             'S3_BUCKET': bucket_name,
-            'TRAINING_INSTANCE_TYPE': 'ml.g4dn.xlarge',
+            'TRAINING_INSTANCE_TYPE': 'ml.m5.xlarge',
             'TRAINING_INSTANCE_COUNT': '1',
             'MAX_RUNTIME_SECONDS': '3600'
         }):

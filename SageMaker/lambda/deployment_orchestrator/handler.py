@@ -305,6 +305,10 @@ def lambda_handler(event, context):
             f"Model {model_name} successfully deployed to endpoint {ENDPOINT_NAME}\nModel URI: {s3_uri}"
         )
 
+        if previous_config_name:
+            # Run cleanup
+            cleanup_resources(sagemaker, previous_config_name)
+
         return {
             'statusCode': 200,
             'body': json.dumps({
@@ -329,3 +333,26 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': json.dumps({'error': error_msg})
         }
+        
+
+def cleanup_resources(sagemaker_client, config_name):
+    """
+    Xóa Endpoint Config và Model cũ để tránh đầy Quota
+    """
+    try:
+        # Get information of the config
+        response = sagemaker_client.describe_endpoint_config(EndpointConfigName=config_name)
+        model_name = response['ProductionVariants'][0]['ModelName']
+        
+        # Delete endpoint config
+        logger.info(f"Deleting old endpoint config: {config_name}")
+        sagemaker_client.delete_endpoint_config(EndpointConfigName=config_name)
+        
+        # Delete model
+        logger.info(f"Deleting old model: {model_name}")
+        sagemaker_client.delete_model(ModelName=model_name)
+        
+    except Exception as e:
+        # Chỉ log warning, không để lỗi cleanup làm fail cả pipeline
+        logger.warning(f"Failed to cleanup old resources {config_name}: {str(e)}")
+

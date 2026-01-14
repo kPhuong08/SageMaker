@@ -12,7 +12,7 @@ create_bucket = true
 endpoint_name = "serverless-inference-endpoint"
 
 # Serverless Endpoint Configuration
-serverless_memory_mb = 4096        # Memory in MB (1024, 2048, 3072, 4096, 5120, 6144)
+serverless_memory_mb = 3072        # Memory in MB (1024, 2048, 3072, 4096, 5120, 6144)
 serverless_max_concurrency = 10    # Max concurrent requests (1-200)
 
 # Monitoring and Alerting Configuration

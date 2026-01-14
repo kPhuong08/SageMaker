@@ -56,7 +56,7 @@ variable "trigger_type" {
 variable "serverless_memory_mb" {
   description = "Memory size for serverless endpoint in MB (1024, 2048, 3072, 4096, 5120, 6144)"
   type        = number
-  default     = 4096
+  default     = 3072
   
   validation {
     condition     = contains([1024, 2048, 3072, 4096, 5120, 6144], var.serverless_memory_mb)
