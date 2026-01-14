@@ -77,7 +77,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "sagemaker:CreateTrainingJob",
           "sagemaker:DescribeTrainingJob",
           "sagemaker:StopTrainingJob",
-          "sagemaker:ListTrainingJobs"
+          "sagemaker:ListTrainingJobs",
           "sagemaker:AddTags"
         ],
         Resource = "*"
