@@ -1,4 +1,4 @@
-variable "bucket_name" {
+variable "s3_bucket" {
   description = "S3 bucket name"
   type        = string
 }
@@ -14,3 +14,5 @@ variable "create_bucket" {
   type        = bool
   default     = true
 }
+
+

@@ -1,5 +1,5 @@
 resource "aws_iam_role" "sagemaker_execution_role" {
-  name = "mlops_sagemaker_exec_role-${replace(var.bucket_name, "[^a-zA-Z0-9_-]", "-")}" 
+  name = "mlops_sagemaker_exec_role-${replace(var.s3_bucket, "[^a-zA-Z0-9_-]", "-")}" 
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -20,7 +20,7 @@ resource "aws_iam_role_policy_attachment" "sagemaker_full_access" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
 }
 resource "aws_iam_role" "lambda_role" {
-  name = "mlops_lambda_role-${replace(var.bucket_name, "[^a-zA-Z0-9_-]", "-")}" 
+  name = "mlops_lambda_role-${replace(var.s3_bucket, "[^a-zA-Z0-9_-]", "-")}" 
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -100,6 +100,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
+# Allow lambda access to sagemaker
 resource "aws_iam_role_policy" "lambda_pass_sagemaker_role" {
   name = "lambda_pass_sagemaker_role_policy"
   role = aws_iam_role.lambda_role.id  # Tên resource role của Lambda function
@@ -122,4 +123,29 @@ resource "aws_iam_role_policy" "lambda_pass_sagemaker_role" {
   })
 }
 
+# Policy allow Sagemaker read/write in S3
+resource "aws_iam_role_policy" "sagemaker_s3_policy" {
+  name = "mlops_sagemaker_s3_access"
+  role = aws_iam_role.sagemaker_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+
+        Resource = [
+          "arn:aws:s3:::${var.s3_bucket}",       # Bucket gốc
+          "arn:aws:s3:::${var.s3_bucket}/*"      # Các file bên trong
+        ]
+      }
+    ]
+  })
+}
 

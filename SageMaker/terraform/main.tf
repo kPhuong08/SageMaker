@@ -13,7 +13,7 @@ module "s3" {
 module "iam" {
   source = "./modules/iam"
 
-  bucket_name = module.s3.s3_bucket_name
+  s3_bucket = module.s3.s3_bucket_name
   bucket_arn  = "arn:aws:s3:::${module.s3.s3_bucket_name}"
   create_bucket = var.create_bucket
 }
