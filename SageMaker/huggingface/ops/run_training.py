@@ -13,7 +13,7 @@ def launch_training():
     huggingface_estimator = HuggingFace(
         entry_point='train.py',
         source_dir='src',
-        instance_type='ml.g4dn.xlarge',
+        instance_type='ml.m5.xlarge',
         instance_count=1,
         role=ROLE,
         transformers_version='4.28.1',
