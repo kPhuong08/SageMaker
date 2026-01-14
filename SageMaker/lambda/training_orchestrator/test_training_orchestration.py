@@ -96,7 +96,7 @@ class TestTrainingOrchestration:
                 
                 # Property: Resource configuration should match environment variables
                 resource_config = call_args['ResourceConfig']
-                assert resource_config['InstanceType'] == 'ml.g4dn.xlarge'
+                assert resource_config['InstanceType'] == 'ml.m5.xlarge'
                 assert resource_config['InstanceCount'] == 1
 
     @given(
