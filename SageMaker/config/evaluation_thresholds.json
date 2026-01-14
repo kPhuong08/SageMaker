@@ -1,0 +1,10 @@
+{
+  "_comment": "Evaluation thresholds for model quality checks",
+  "_description": "Models must meet or exceed these thresholds to be deployed",
+  
+  "accuracy": 0.85,
+  "f1_score": 0.80,
+  "precision": 0.75,
+  "recall": 0.75
+}
+
