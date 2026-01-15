@@ -199,7 +199,7 @@ def start_training_job(s3_info):
         },
         'InputDataConfig': [
             {
-                'ChannelName': 'training',
+                'ChannelName': 'train',
                 'DataSource': {
                     'S3DataSource': {
                         'S3DataType': 'S3Prefix',
