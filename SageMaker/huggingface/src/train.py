@@ -122,6 +122,7 @@ def train():
     parser.add_argument("--learning_rate", type=float, default=2e-5)
     parser.add_argument("--model_name", type=str, default="distilbert-base-uncased")
     parser.add_argument("--max_length", type=int, default=128)
+    parser.add_argument("--test_split", type=float, default=0.2, help="Fraction of data to use for testing")
     parser.add_argument("--model_dir", type=str, default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model"))
     parser.add_argument("--train", type=str, default=os.environ.get("SM_CHANNEL_TRAIN", "/opt/ml/input/data/train"))
     parser.add_argument("--test", type=str, default=os.environ.get("SM_CHANNEL_TEST", "/opt/ml/input/data/test"))
@@ -141,8 +142,26 @@ def train():
     
     try:
         # Load data
-        train_df = load_data(args.train)
-        test_df = load_data(args.test) if os.path.exists(args.test) else None
+        full_df = load_data(args.train)
+        
+        # Check if separate test channel exists
+        if os.path.exists(args.test):
+            test_df = load_data(args.test)
+            train_df = full_df
+            print(f"Using separate test set: {len(test_df)} examples")
+        else:
+            # Split data into train and test
+            from sklearn.model_selection import train_test_split
+            
+            print(f"\nNo separate test set found. Splitting data with test_split={args.test_split}")
+            train_df, test_df = train_test_split(
+                full_df, 
+                test_size=args.test_split, 
+                random_state=42,
+                stratify=full_df['label']  # Maintain label distribution
+            )
+            print(f"Train set: {len(train_df)} examples")
+            print(f"Test set: {len(test_df)} examples")
         
         # Get number of labels
         num_labels = train_df['label'].nunique()
@@ -158,7 +177,7 @@ def train():
         
         # Preprocess data
         train_dataset = preprocess_data(train_df, tokenizer, args.max_length)
-        test_dataset = preprocess_data(test_df, tokenizer, args.max_length) if test_df is not None else None
+        test_dataset = preprocess_data(test_df, tokenizer, args.max_length)
         
         # Training arguments
         training_args = TrainingArguments(
@@ -170,10 +189,10 @@ def train():
             weight_decay=0.01,
             logging_dir='/opt/ml/output/tensorboard',
             logging_steps=10,
-            evaluation_strategy='epoch' if test_dataset else 'no',
+            evaluation_strategy='epoch',
             save_strategy='epoch',
-            load_best_model_at_end=True if test_dataset else False,
-            metric_for_best_model='accuracy' if test_dataset else None,
+            load_best_model_at_end=True,
+            metric_for_best_model='accuracy',
             save_total_limit=2,
             report_to='none'  # Disable wandb, etc.
         )
@@ -198,18 +217,13 @@ def train():
         print("="*60)
         train_result = trainer.train()
         
-        # Evaluate
+        # Evaluate on test set
         print("\n" + "="*60)
-        print("Evaluating model...")
+        print("Evaluating model on test set...")
         print("="*60)
         
-        if test_dataset:
-            eval_results = trainer.evaluate()
-            print(f"Evaluation results: {eval_results}")
-        else:
-            # If no test set, evaluate on train set
-            eval_results = trainer.evaluate(train_dataset)
-            print(f"Training set evaluation: {eval_results}")
+        eval_results = trainer.evaluate(test_dataset)
+        print(f"Test set evaluation results: {eval_results}")
         
         # Save model
         os.makedirs(args.model_dir, exist_ok=True)

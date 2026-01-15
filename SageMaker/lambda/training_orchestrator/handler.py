@@ -194,6 +194,7 @@ def start_training_job(s3_info):
             'epochs': '5',
             'batch_size': '32',
             'learning_rate': '2e-5',
+            'test_split': '0.2',  # 20% data for testing
             'sagemaker_container_log_level': '20',
             'sagemaker_region': os.environ.get('AWS_REGION', 'us-east-1')
         },
