@@ -189,7 +189,7 @@ def train():
             eval_dataset=test_dataset,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            compute_metrics=compute_metrics if test_dataset else None
+            compute_metrics=compute_metrics
         )
         
         # Train
