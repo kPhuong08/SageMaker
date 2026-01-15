@@ -11,6 +11,8 @@ import json
 import time
 import pandas as pd
 from datasets import Dataset
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -18,7 +20,6 @@ from transformers import (
     Trainer,
     DataCollatorWithPadding
 )
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 
 def load_data(data_path):
@@ -120,7 +121,7 @@ def train():
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
-    parser.add_argument("--model_name", type=str, default="distilbert-base-uncased")
+    parser.add_argument("--model_name", type=str, default="distilbert-base-cased")
     parser.add_argument("--max_length", type=int, default=128)
     parser.add_argument("--test_split", type=float, default=0.2, help="Fraction of data to use for testing")
     parser.add_argument("--model_dir", type=str, default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model"))
@@ -146,13 +147,11 @@ def train():
         
         # Check if separate test channel exists
         if os.path.exists(args.test):
-            test_df = load_data(args.test)
+            test_df = load_data(args.test) 
             train_df = full_df
             print(f"Using separate test set: {len(test_df)} examples")
         else:
             # Split data into train and test
-            from sklearn.model_selection import train_test_split
-            
             print(f"\nNo separate test set found. Splitting data with test_split={args.test_split}")
             train_df, test_df = train_test_split(
                 full_df, 
