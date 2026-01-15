@@ -28,12 +28,12 @@ class TestTrainingOrchestration:
         bucket_name=st.text(
             min_size=3, 
             max_size=63, 
-            alphabet=st.characters(whitelist_characters=string.ascii_lowercase + string.digits + '-')
+            alphabet=st.sampled_from(string.ascii_lowercase + string.digits + '-')
         ),
         object_key=st.text(
             min_size=1, 
             max_size=100, 
-            alphabet=st.characters(whitelist_characters=string.ascii_letters + string.digits + '/-._')
+            alphabet=st.sampled_from(string.ascii_letters + string.digits + '/-._')
         ),
     )
     @settings(max_examples=100)
