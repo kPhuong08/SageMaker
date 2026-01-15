@@ -114,9 +114,9 @@ variable "instance_count" {
 }
 
 variable "inference_image" {
-  description = "Optional inference container image URI"
+  description = "Docker image for HuggingFace inference"
   type        = string
-  default     = ""
+  default     = "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04"
 }
 # Removed: GitHub workflow triggering variables - no longer needed for event-driven architecture
 

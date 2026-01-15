@@ -19,10 +19,26 @@ def _get_env_var(name, default=None):
     return os.environ.get(name, default)
 
 def _model_name_from_key(key):
-    """Generate unique model name from S3 key"""
-    base = key.replace('/', '-').replace('.', '-')
+    """
+    Generate unique model name from S3 key (max 63 chars for SageMaker)
+    """
+    # Extract meaningful parts from key
+    # Example: models/approved/training-job-20260115-075858-20260115-080646/model.tar.gz
+    parts = key.split('/')
+    
+    # Get timestamp from current time (shorter than using full path)
     ts = int(time.time())
-    return f"model-{base}-{ts}"
+    
+    # Create short, unique name
+    # Format: model-TIMESTAMP (max 17 chars)
+    model_name = f"model-{ts}"
+    
+    # Ensure it's within 63 char limit
+    if len(model_name) > 63:
+        model_name = model_name[:63]
+    
+    logger.info(f"Generated model name: {model_name} (length: {len(model_name)})")
+    return model_name
 
 def _endpoint_config_name(model_name):
     """Generate endpoint config name from model name"""
@@ -215,12 +231,20 @@ def lambda_handler(event, context):
         model_name = _model_name_from_key(key)
         cfg_name = _endpoint_config_name(model_name)
         
+        # Get inference image with proper fallback
+        inference_image = _get_env_var('INFERENCE_IMAGE')
+        if not inference_image or inference_image == '':
+            # Default HuggingFace PyTorch inference image
+            inference_image = f'763104351884.dkr.ecr.{REGION}.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04'
+            logger.warning(f"INFERENCE_IMAGE not set, using default: {inference_image}")
+        
         primary_container = {
-            'Image': _get_env_var('INFERENCE_IMAGE', f'763104351884.dkr.ecr.{REGION}.amazonaws.com/huggingface-pytorch-inference:latest'),
+            'Image': inference_image,
             'ModelDataUrl': s3_uri,
         }
 
         logger.info('Creating SageMaker model %s with model data %s', model_name, s3_uri)
+        logger.info('Using inference image: %s', inference_image)
         sagemaker.create_model(
             ModelName=model_name,
             PrimaryContainer=primary_container,
