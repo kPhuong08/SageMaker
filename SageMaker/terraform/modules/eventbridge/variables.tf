@@ -25,6 +25,16 @@ variable "training_orchestrator_lambda_name" {
   type        = string
 }
 
+variable "model_evaluator_lambda_arn" {
+  description = "ARN of the Model Evaluator Lambda function"
+  type        = string
+}
+
+variable "model_evaluator_lambda_name" {
+  description = "Name of the Model Evaluator Lambda function (used for permissions)"
+  type        = string
+}
+
 variable "deployment_orchestrator_lambda_arn" {
   description = "ARN of the Deployment Orchestrator Lambda function"
   type        = string

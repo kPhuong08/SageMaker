@@ -133,6 +133,19 @@ variable "training_orchestrator_handler" {
   default     = "handler.lambda_handler"
 }
 
+# Model Evaluator Lambda Configuration
+variable "model_evaluator_source_file" {
+  description = "Path to the model evaluator Lambda source file"
+  type        = string
+  default     = "../lambda/model_evaluator/handler.py"
+}
+
+variable "model_evaluator_handler" {
+  description = "Model evaluator Lambda handler"
+  type        = string
+  default     = "handler.lambda_handler"
+}
+
 # Deployment Orchestrator Lambda Configuration
 variable "deployment_orchestrator_source_file" {
   description = "Path to the deployment orchestrator Lambda source file"

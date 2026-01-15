@@ -41,6 +41,12 @@ variable "training_lambda_function_name" {
   default     = ""
 }
 
+variable "model_evaluator_lambda_function_name" {
+  description = "Name of the model evaluator Lambda function to monitor"
+  type        = string
+  default     = ""
+}
+
 variable "deployment_lambda_function_name" {
   description = "Name of the deployment orchestrator Lambda function to monitor"
   type        = string
