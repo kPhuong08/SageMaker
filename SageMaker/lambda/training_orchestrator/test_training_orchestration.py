@@ -7,6 +7,8 @@ to verify correctness across a wide range of inputs.
 
 import json
 import pytest
+import string
+from datetime import datetime
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, patch, MagicMock
 import os
@@ -23,8 +25,16 @@ class TestTrainingOrchestration:
     """
 
     @given(
-        bucket_name=st.text(min_size=3, max_size=63, alphabet=st.characters(whitelist_categories=('Ll', 'Nd'), whitelist_characters='-')),
-        object_key=st.text(min_size=1, max_size=100, alphabet=st.characters(whitelist_categories=('L', 'Nd'), whitelist_characters='/-._')),
+        bucket_name=st.text(
+            min_size=3, 
+            max_size=63, 
+            alphabet=st.characters(whitelist_characters=string.ascii_lowercase + string.digits + '-')
+        ),
+        object_key=st.text(
+            min_size=1, 
+            max_size=100, 
+            alphabet=st.characters(whitelist_characters=string.ascii_letters + string.digits + '/-._')
+        ),
     )
     @settings(max_examples=100)
     def test_property_25_sagemaker_training_job_creation(self, bucket_name, object_key):
@@ -61,11 +71,24 @@ class TestTrainingOrchestration:
             'MAX_RUNTIME_SECONDS': '3600'
         }):
             # Mock SageMaker client
-            with patch('handler.sagemaker_client') as mock_sagemaker:
+            with patch('handler.sagemaker_client') as mock_sagemaker, \
+                 patch('handler.s3_client') as mock_s3:
+                
+                # Setup Mock: S3 list_objects_v2 must return a fake file so get_latest_training_code_uri works
+                mock_s3.list_objects_v2.return_value = {
+                    'Contents': [
+                        {
+                            'Key': 'models/code/training_code_20230101.tar.gz',
+                            'LastModified': datetime(2023, 1, 1)
+                        }
+                    ]
+                }
+
+                # Setup Mock: SageMaker create_training_job return value
                 mock_sagemaker.create_training_job.return_value = {
                     'TrainingJobArn': f'arn:aws:sagemaker:us-east-1:123456789012:training-job/test-job'
                 }
-                
+
                 # Extract S3 info from event
                 s3_info = handler.extract_s3_info_from_event(event)
                 
