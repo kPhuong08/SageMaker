@@ -35,7 +35,7 @@ INSTANCE_TYPE = os.environ.get('TRAINING_INSTANCE_TYPE', 'ml.m5.xlarge')
 INSTANCE_COUNT = int(os.environ.get('TRAINING_INSTANCE_COUNT', '1'))
 MAX_RUNTIME_SECONDS = int(os.environ.get('MAX_RUNTIME_SECONDS', '3600'))  # 1 hour
 SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
-S3_BUCKET = os.environ.get('S3_BUCKET')
+S3_BUCKET = os.environ.get('BUCKET_NAME')
 
 
 def lambda_handler(event, context):
@@ -142,26 +142,6 @@ def extract_s3_info_from_event(event):
     except KeyError as e:
         raise ValueError(f"Invalid S3 event structure. Missing key: {e}")
 
-def get_latest_training_code_uri(bucket):
-    """
-    Tìm file code (tar.gz) mới nhất trong folder models/code/
-    """
-    try:
-        prefix = 'models/code/'
-        response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-        
-        if 'Contents' not in response:
-            raise ValueError(f"No training code found in s3://{bucket}/{prefix}")
-            
-        # Sort by time (newest is the bottom)
-        latest_file = sorted(response['Contents'], key=lambda x: x['LastModified'])[-1]
-        key = latest_file['Key']
-        
-        return f"s3://{bucket}/{key}"
-    except Exception as e:
-        logger.error(f"Failed to find latest training code: {str(e)}")
-        raise
-
 def start_training_job(s3_info):
     """
     Start a SageMaker training job with the provided data.
@@ -172,12 +152,6 @@ def start_training_job(s3_info):
     Returns:
         str: Training job name
     """
-
-    # Find newest training code
-    bucket_name = os.environ.get("S3_BUCKET", S3_BUCKET)
-    code_s3_uri = get_latest_training_code_uri(bucket_name)
-    logger.info(f"Using training code from: {code_s3_uri}")
-
     # Generate unique training job name
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     training_job_name = f"training-job-{timestamp}"
@@ -190,29 +164,13 @@ def start_training_job(s3_info):
             'TrainingImage': TRAINING_IMAGE,
             'TrainingInputMode': 'File'
         },
-        'HyperParameters': {
-            # Name of main file python (match with the structure in .tar.gz)
-            'sagemaker_program': 'src/train.py', 
-            
-            # URL S3 direct to file code archived
-            'sagemaker_submit_directory': code_s3_uri,
-            
-            # Other variables for training script
-            'epochs': '5',
-            'batch_size': '32',
-            'learning_rate': '2e-5',
-            
-            # Config container
-            'sagemaker_container_log_level': '20',
-            'sagemaker_region': os.environ.get('AWS_REGION', 'us-east-1')
-        },
         'InputDataConfig': [
             {
                 'ChannelName': 'training',
                 'DataSource': {
                     'S3DataSource': {
                         'S3DataType': 'S3Prefix',
-                        'S3Uri': s3_info['data_path'],
+                        'S3Uri': s3_info['data_path '],
                         'S3DataDistributionType': 'FullyReplicated'
                     }
                 },
