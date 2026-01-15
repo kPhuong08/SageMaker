@@ -106,7 +106,7 @@ class TestTrainingOrchestration:
                 # Property: Input data config should contain the correct S3 path
                 input_data_config = call_args['InputDataConfig']
                 assert len(input_data_config) == 1
-                assert input_data_config[0]['ChannelName'] == 'training'
+                assert input_data_config[0]['ChannelName'] == 'train'
                 
                 # Property: S3 data source should point to the directory containing the uploaded data
                 s3_data_source = input_data_config[0]['DataSource']['S3DataSource']
