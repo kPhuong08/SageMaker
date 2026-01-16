@@ -34,7 +34,7 @@ aws s3 cp data.csv s3://atml-models-bucket/data/train/
 ```
 .
 ├── SageMaker/
-│   ├── README.md                    # Detailed documentation (1244 lines)
+│   |                   
 │   ├── huggingface/
 │   │   ├── src/train.py             # Training script with fine-tuning
 │   │   ├── ops/evaluate_model.py    # Model evaluation logic
@@ -109,33 +109,3 @@ response = client.invoke_endpoint(
 )
 print(json.loads(response['Body'].read()))
 ```
-
-## 📖 Full Documentation
-
-👉 **[SageMaker/README.md](SageMaker/README.md)** - Detailed architecture, all components, troubleshooting
-
-## ⚙️ Configuration
-
-- **Training model**: `distilbert-base-cased`
-- **Instance type**: `ml.m5.xlarge`
-- **Endpoint memory**: `3072 MB` (serverless)
-- **Evaluation thresholds**: See `SageMaker/config/evaluation_thresholds.json`
-
-## 📝 Thay Đổi Gần Đây
-
-- ✅ Fixed metrics = 0.0 (auto train/test split)
-- ✅ Fixed import errors (sklearn imports at top)
-- ✅ Updated to distilbert-base-cased
-- ✅ Fixed deployment validation (model name length)
-- ✅ All tests passing
-
-## 🔐 Prerequisites
-
-- AWS Account with appropriate permissions
-- AWS CLI configured
-- Terraform installed
-- 500+ training examples (recommended)
-
----
-
-**Status**: Production Ready ✅ | **Last Updated**: Jan 16, 2026
